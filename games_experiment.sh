@@ -4,7 +4,7 @@
 seeds=(0 1 2)
 
 # Games (tasks)
-tasks=("atari_krull")  # Add more tasks as needed
+tasks=("atari_pong" "atari_ms_pacman" "atari_boxing")  # Add more tasks as needed
 
 #K steps
 

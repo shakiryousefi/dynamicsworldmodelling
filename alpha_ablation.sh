@@ -7,7 +7,7 @@ seeds=(0 1 2)
 tasks=("atari_pong")  # Add more tasks as needed
 
 # Alphas
-alphas=(0 2 5 10)
+alphas=(0 1 2 5 10)
 
 # Loop through each configuration
 for seed in "${seeds[@]}"; do
