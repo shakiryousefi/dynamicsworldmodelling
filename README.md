@@ -1,130 +1,123 @@
-# Mastering Diverse Domains through World Models
+# Readme
+Code repository for project in the ETH Zurich – Deep Learning class 2023-2024. Much of the code is based on the DreamerV3 implementation in JAX. The notable differences are highlighted lower in the Readme file.
 
-A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
-learning algorithm that masters a wide range of applications with fixed
-hyperparameters.
+# Installation Instructions
 
-![DreamerV3 Tasks](https://user-images.githubusercontent.com/2111293/217647148-cbc522e2-61ad-4553-8e14-1ecdc8d9438b.gif)
-
-If you find this code useful, please reference in your paper:
-
-```
-@article{hafner2023dreamerv3,
-  title={Mastering Diverse Domains through World Models},
-  author={Hafner, Danijar and Pasukonis, Jurgis and Ba, Jimmy and Lillicrap, Timothy},
-  journal={arXiv preprint arXiv:2301.04104},
-  year={2023}
-}
-```
-
-To learn more:
-
-- [Research paper][paper]
-- [Project website][website]
-- [Twitter summary][tweet]
-
-## DreamerV3
-
-DreamerV3 learns a world model from experiences and uses it to train an actor
-critic policy from imagined trajectories. The world model encodes sensory
-inputs into categorical representations and predicts future representations and
-rewards given actions.
-
-![DreamerV3 Method Diagram](https://user-images.githubusercontent.com/2111293/217355673-4abc0ce5-1a4b-4366-a08d-64754289d659.png)
-
-DreamerV3 masters a wide range of domains with a fixed set of hyperparameters,
-outperforming specialized methods. Removing the need for tuning reduces the
-amount of expert knowledge and computational resources needed to apply
-reinforcement learning.
-
-![DreamerV3 Benchmark Scores](https://user-images.githubusercontent.com/2111293/217356042-536a693a-cb5e-42aa-a20f-5303a77cad9c.png)
-
-Due to its robustness, DreamerV3 shows favorable scaling properties. Notably,
-using larger models consistently increases not only its final performance but
-also its data-efficiency. Increasing the number of gradient steps further
-increases data efficiency.
-
-![DreamerV3 Scaling Behavior](https://user-images.githubusercontent.com/2111293/217356063-0cf06b17-89f0-4d5f-85a9-b583438c98dd.png)
-
-# Instructions
-
-## Package
-
-If you just want to run DreamerV3 on a custom environment, you can `pip install
-dreamerv3` and copy [`example.py`][example] from this repository as a starting
-point.
-
-## Docker
-
-If you want to make modifications to the code, you can either use the provided
-`Dockerfile` that contains instructions or follow the manual instructions
-below.
-
-## Manual
-
-Install [JAX][jax] and then the other dependencies:
+The code in the repository was ran on the Euler cluster using Python 3.10. In order to install the needed packages, you can run
+i
 
 ```sh
 pip install -r requirements.txt
 ```
 
-Simple training script:
+We also recommend upgrading JAX to utilize the GPU. This can be done by running
+
 
 ```sh
-python example.py
+pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
 
-Flexible training script:
+During our installation, we observed problems installing the Atari gym environment. Specifically, we got an error related to
+
+
+```sh
+error in gym setup command: 'extras_require' must be a dictionary whose values are strings or lists of strings containing valid project/version requirement specifiers.
+```
+We mitigated this by downgrading setuptools and wheel
+
+```sh
+pip install setuptools==65.5.0 "wheel<0.40.0"
+```
+
+# Running the code
+
+We provide the bash scripts used to run the experiments for the project. The different hyperparameters are natively integrated into the DreamerV3 configuration -- allowing for being set in the configs.yaml file or directly overwritten using the terminal. An example input that overwrites the environment, alpha parameter, and k-steps can be seen below
+
 
 ```sh
 python dreamerv3/train.py \
   --logdir ~/logdir/$(date "+%Y%m%d-%H%M%S") \
-  --configs crafter --batch_size 16 --run.train_ratio 32
+  --configs atari100k --task atari_pong --dynamics.k_steps 3 --dynamics.alpha_strength 5
 ```
 
-# Tips
 
-- All config options are listed in `configs.yaml` and you can override them
-  from the command line.
-- The `debug` config block reduces the network size, batch size, duration
-  between logs, and so on for fast debugging (but does not learn a good model).
-- By default, the code tries to run on GPU. You can switch to CPU or TPU using
-  the `--jax.platform cpu` flag. Note that multi-GPU support is untested.
-- You can run with multiple config blocks that will override defaults in the
-  order they are specified, for example `--configs crafter large`.
-- By default, metrics are printed to the terminal, appended to a JSON lines
-  file, and written as TensorBoard summaries. Other outputs like WandB can be
-  enabled in the training script.
-- If you get a `Too many leaves for PyTreeDef` error, it means you're
-  reloading a checkpoint that is not compatible with the current config. This
-  often happens when reusing an old logdir by accident.
-- If you are getting CUDA errors, scroll up because the cause is often just an
-  error that happened earlier, such as out of memory or incompatible JAX and
-  CUDA versions.
-- You can use the `small`, `medium`, `large` config blocks to reduce memory
-  requirements. The default is `xlarge`. See the scaling graph above to see how
-  this affects performance.
-- Many environments are included, some of which require installating additional
-  packages. See the installation scripts in `scripts` and the `Dockerfile` for
-  reference.
-- When running on custom environments, make sure to specify the observation
-  keys the agent should be using via `encoder.mlp_keys`, `encode.cnn_keys`,
-  `decoder.mlp_keys` and `decoder.cnn_keys`.
-- To log metrics from environments without showing them to the agent or storing
-  them in the replay buffer, return them as observation keys with `log_` prefix
-  and enable logging via the `run.log_keys_...` options.
-- To continue stopped training runs, simply run the same command line again and
-  make sure that the `--logdir` points to the same directory.
+# Code differences between DreamerV3
 
-# Disclaimer
+We highlight the differences between our implementation and DreamerV3 below. Specifically, we had two change the code in two main places: generating the mask, when training the dynamics predictor network, and calculating the actual loss.
 
-This repository contains a reimplementation of DreamerV3 based on the open
-source DreamerV2 code base. It is unrelated to Google or DeepMind. The
-implementation has been tested to reproduce the official results on a range of
-environments.
+The first part happens in dreamerv3/agent.py, where the differences between DreamerV3 and our implementation is:
 
-[jax]: https://github.com/google/jax#pip-installation-gpu-cuda
-[paper]: https://arxiv.org/pdf/2301.04104v1.pdf
-[website]: https://danijar.com/dreamerv3
-[tweet]: https://twitter.com/danijarh/status/1613161946223677441
-[example]: https://github.com/danijar/dreamerv3/blob/main/example.py
+```  
+  def generate_mask(self, data, state = None):
+    #Obtain the k and alpha from the configs list
+    k = self.config.dynamics.k_steps
+    alpha = self.config.dynamics.alpha_strength
+    mask_list = []
+    
+    #Loop through the batch
+    for batch_index in range(data.shape[0]):
+        batch = data[batch_index]
+        n = batch.shape[0]
+        for i in range(n):
+            temp_mask = jnp.zeros(batch.shape[1:], dtype=int)
+            #Adjust for the fact that we need to truncate
+            for j in range(max(0, i - k), min(n, i + k + 1)):
+                temp_mask += (jnp.abs(batch[i] - batch[j]) > 0).astype(int)
+            temp_mask = (temp_mask > 0).astype(int)
+            mask_list.append(temp_mask)
+    
+    mask = jnp.array(mask_list).reshape(data.shape)
+
+    #Map all the moving pixels to alpha, and the rest to ones
+    adjusted_mask = jnp.where(mask > 0, alpha, 1)
+
+    return adjusted_mask
+
+  def loss(self, data, state):
+    embed = self.encoder(data)
+    prev_latent, prev_action = state
+    prev_actions = jnp.concatenate([
+        prev_action[:, None], data['action'][:, :-1]], 1)
+    post, prior = self.rssm.observe(
+        embed, prev_actions, data['is_first'], prev_latent)
+    dists = {}
+    feats = {**post, 'embed': embed}
+    for name, head in self.heads.items():
+      out = head(feats if name in self.config.grad_heads else sg(feats))
+      out = out if isinstance(out, dict) else {name: out}
+      dists.update(out)
+    losses = {}
+    losses['dyn'] = self.rssm.dyn_loss(post, prior, **self.config.dyn_loss)
+    losses['rep'] = self.rssm.rep_loss(post, prior, **self.config.rep_loss)
+    for key, dist in dists.items():
+      loss = 0
+      #Check if the output of the predictor is the frame 
+      if key == 'image':
+          mask = None
+          #Check if we should use masked loss, and generate the mask using the auxillary function above
+          if self.config.dynamics.masked_loss:
+              mask = self.generate_mask(data[key])
+          loss = -dist.log_prob(data[key].astype(jnp.float32), mask)
+```
+
+Secondly, as we can see above the mask is passed to the loss function, which requirees that we edit the loss. This is done in dreamerv3/jaxutils.py, where
+
+
+```
+  def log_prob(self, value, mask = None):
+    assert self._mode.shape == value.shape, (self._mode.shape, value.shape)
+    distance = ((self._mode - value) ** 2)
+
+    # Apply the window mask if provided
+    if mask is not None:
+        # Ensure that the mask is broadcastable to the shape of 'distance'
+        distance *= mask  # Element-wise multiplication
+
+    if self._agg == 'mean':
+      loss = distance.mean(self._dims)
+    elif self._agg == 'sum':
+      loss = distance.sum(self._dims)
+    else:
+      raise NotImplementedError(self._agg)
+    return -loss
+```

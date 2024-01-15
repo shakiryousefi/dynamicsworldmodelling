@@ -1,4 +1,5 @@
 import embodied
+import numpy as np
 import jax
 import jax.numpy as jnp
 import ruamel.yaml as yaml
@@ -148,6 +149,31 @@ class WorldModel(nj.Module):
     metrics.update(mets)
     return state, outs, metrics
 
+  def generate_mask(self, data, state = None):
+    #Obtain the k and alpha from the configs list
+    k = self.config.dynamics.k_steps
+    alpha = self.config.dynamics.alpha_strength
+    mask_list = []
+    
+    #Loop through the batch
+    for batch_index in range(data.shape[0]):
+        batch = data[batch_index]
+        n = batch.shape[0]
+        for i in range(n):
+            temp_mask = jnp.zeros(batch.shape[1:], dtype=int)
+            #Adjust for the fact that we need to truncate
+            for j in range(max(0, i - k), min(n, i + k + 1)):
+                temp_mask += (jnp.abs(batch[i] - batch[j]) > 0).astype(int)
+            temp_mask = (temp_mask > 0).astype(int)
+            mask_list.append(temp_mask)
+    
+    mask = jnp.array(mask_list).reshape(data.shape)
+
+    #Map all the moving pixels to alpha, and the rest to ones
+    adjusted_mask = jnp.where(mask > 0, alpha, 1)
+
+    return adjusted_mask
+
   def loss(self, data, state):
     embed = self.encoder(data)
     prev_latent, prev_action = state
@@ -165,7 +191,16 @@ class WorldModel(nj.Module):
     losses['dyn'] = self.rssm.dyn_loss(post, prior, **self.config.dyn_loss)
     losses['rep'] = self.rssm.rep_loss(post, prior, **self.config.rep_loss)
     for key, dist in dists.items():
-      loss = -dist.log_prob(data[key].astype(jnp.float32))
+      loss = 0
+      #Check if the output of the predictor is the frame 
+      if key == 'image':
+          mask = None
+          #Check if we should use masked loss, and generate the mask using the auxillary function above
+          if self.config.dynamics.masked_loss:
+              mask = self.generate_mask(data[key])
+          loss = -dist.log_prob(data[key].astype(jnp.float32), mask)
+      else:
+          loss = -dist.log_prob(data[key].astype(jnp.float32))
       assert loss.shape == embed.shape[:2], (key, loss.shape)
       losses[key] = loss
     scaled = {k: v * self.scales[k] for k, v in losses.items()}

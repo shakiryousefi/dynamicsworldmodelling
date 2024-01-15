@@ -1,10 +1,11 @@
 defaults:
 
-  seed: 0
+  seed: 1
   method: name
   task: dummy_disc
   logdir: /dev/null
   replay: uniform
+  should_run: True
   replay_size: 1e6
   replay_online: False
   eval_dir: ''
@@ -26,9 +27,9 @@ defaults:
     script: train
     steps: 1e10
     expl_until: 0
-    log_every: 300
-    save_every: 900
-    eval_every: 1e6
+    log_every: 123
+    save_every: 234
+    eval_every: 1234
     eval_initial: True
     eval_eps: 1
     eval_samples: 1
@@ -101,45 +102,21 @@ defaults:
   disag_target: [stoch]
   disag_models: 8
 
-minecraft:
-
-  task: minecraft_diamond
-  envs.amount: 16
-  run:
-    script: train_save
-    eval_fill: 1e5
-    train_ratio: 16
-    log_keys_max: '^log_inventory.*'
-  encoder: {mlp_keys: 'inventory|inventory_max|equipped|health|hunger|breath|reward', cnn_keys: 'image'}
-  decoder: {mlp_keys: 'inventory|inventory_max|equipped|health|hunger|breath', cnn_keys: 'image'}
-
-dmlab:
-
-  task: dmlab_explore_goal_locations_small
-  envs.amount: 8
-  encoder: {mlp_keys: '$^', cnn_keys: 'image'}
-  decoder: {mlp_keys: '$^', cnn_keys: 'image'}
-  run.train_ratio: 64
-
-atari:
-
-  task: atari_pong
-  envs.amount: 8
-  run:
-    steps: 5.5e7
-    eval_eps: 10
-    train_ratio: 64
-  encoder: {mlp_keys: '$^', cnn_keys: 'image'}
-  decoder: {mlp_keys: '$^', cnn_keys: 'image'}
+  
+  #Dynamics
+  dynamics:
+     masked_loss: False
+     k_steps: 1
+     alpha_strength: 1
 
 atari100k:
 
-  task: atari_pong
+  task: atari_ms_pacman
   envs: {amount: 1}
   env.atari: {gray: False, repeat: 4, sticky: False, noops: 30, actions: needed}
   run:
     script: train_eval
-    steps: 1.5e5
+    steps: 4.0e5
     eval_every: 1e5
     eval_initial: False
     eval_eps: 100
@@ -149,64 +126,14 @@ atari100k:
   .*\.cnn_depth: 32
   .*\.layers: 2
   .*\.units$: 512
-  actor_eval_sample: True
   encoder: {mlp_keys: '$^', cnn_keys: 'image'}
   decoder: {mlp_keys: '$^', cnn_keys: 'image'}
 
-crafter:
-
-  task: crafter_reward
-  envs.amount: 1
-  run:
-    log_keys_max: '^log_achievement_.*'
-    log_keys_sum: '^log_reward$'
-  run.train_ratio: 512
-  encoder: {mlp_keys: '$^', cnn_keys: 'image'}
-  decoder: {mlp_keys: '$^', cnn_keys: 'image'}
-
-dmc_vision:
-
-  task: dmc_walker_walk
-  run.train_ratio: 512
-  rssm.deter: 512
-  .*\.cnn_depth: 32
-  .*\.layers: 2
-  .*\.units: 512
-  encoder: {mlp_keys: '$^', cnn_keys: 'image'}
-  decoder: {mlp_keys: '$^', cnn_keys: 'image'}
-
-dmc_proprio:
-
-  task: dmc_walker_walk
-  run.train_ratio: 512
-  rssm.deter: 512
-  .*\.cnn_depth: 32
-  .*\.layers: 2
-  .*\.units: 512
-  encoder: {mlp_keys: '.*', cnn_keys: '$^'}
-  decoder: {mlp_keys: '.*', cnn_keys: '$^'}
-
-bsuite:
-
-  task: bsuite_mnist/0
-  envs: {amount: 1, parallel: none}
-  run:
-    script: train
-    train_ratio: 1024  # 128 for cartpole
-  rssm.deter: 512
-  .*\.cnn_depth: 32
-  .*\.layers: 2
-  .*\.units: 512
-
-loconav:
-
-  task: loconav_ant_maze_m
-  env.loconav.repeat: 2
-  run:
-    train_ratio: 512
-    log_keys_max: '^log_.*'
-  encoder: {mlp_keys: '.*', cnn_keys: 'image'}
-  decoder: {mlp_keys: '.*', cnn_keys: 'image'}
+  #Dynamics
+  dynamics:
+     masked_loss: True
+     k_steps: 3
+     alpha_strength: 5
 
 small:
   rssm.deter: 512

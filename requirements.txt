@@ -1,11 +1,13 @@
 cloudpickle
 crafter
-gym==0.19.0
 jax
 jaxlib
 numpy
 optax
 rich
-ruamel.yaml
+ruamel.yaml<0.17.0
 tensorflow-cpu
 tensorflow_probability
+opencv-python
+gym['atari']==0.19.0
+

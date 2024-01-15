@@ -63,6 +63,8 @@ def train_eval(
 
   random_agent = embodied.RandomAgent(train_env.act_space)
   print('Prefill train dataset.')
+
+
   while len(train_replay) < max(args.batch_steps, args.train_fill):
     driver_train(random_agent.policy, steps=100)
   print('Prefill eval dataset.')
@@ -75,6 +77,12 @@ def train_eval(
   dataset_eval = agent.dataset(eval_replay.dataset)
   state = [None]  # To be writable from train step function below.
   batch = [None]
+  for _ in range(should_train(step)):
+      with timer.scope('dataset_train'):
+        batch[0] = next(dataset_train)
+      outs, state[0], mets = agent.train(batch[0], state[0])
+      
+
   def train_step(tran, worker):
     for _ in range(should_train(step)):
       with timer.scope('dataset_train'):

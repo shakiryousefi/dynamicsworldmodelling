@@ -109,9 +109,15 @@ class MSEDist:
   def mean(self):
     return self._mode
 
-  def log_prob(self, value):
+  def log_prob(self, value, mask = None):
     assert self._mode.shape == value.shape, (self._mode.shape, value.shape)
     distance = ((self._mode - value) ** 2)
+
+    # Apply the window mask if provided
+    if mask is not None:
+        # Ensure that the mask is broadcastable to the shape of 'distance'
+        distance *= mask  # Element-wise multiplication
+
     if self._agg == 'mean':
       loss = distance.mean(self._dims)
     elif self._agg == 'sum':
